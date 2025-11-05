@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { MapPin, Navigation, Clock, ChevronDown, ChevronUp, ExternalLink, Train, Bus as BusIcon, TramFront, Ship, Footprints, Layers, Zap } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { MapPin, Navigation, Clock, ChevronDown, ChevronUp, ExternalLink, Train, Bus as BusIcon, TramFront, Ship, Footprints, Layers, Zap, Search, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { getLineColor, getModeColor, getLineShortLabel } from '@/lib/line-colors';
 import { TflBadge } from '@/components/branding/tfl-badge';
+import { Input } from '@/components/ui/input';
 
 type NearbyStation = {
   id: string;
@@ -74,51 +75,114 @@ export default function NextAvailablePage() {
   const [fetchingStations, setFetchingStations] = useState(false);
   const [stationsError, setStationsError] = useState<string | null>(null);
   const [selectedMode, setSelectedMode] = useState<'all' | ModeKey>('all');
+  const [allStations, setAllStations] = useState<NearbyStation[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [arrivalsByStation, setArrivalsByStation] = useState<Record<string, GroupedArrivals>>({});
   const [arrivalsLoading, setArrivalsLoading] = useState<Record<string, boolean>>({});
   const [arrivalsError, setArrivalsError] = useState<Record<string, string | null>>({});
+  const filtersRef = useRef<{ mode: 'all' | ModeKey; search: string }>({ mode: 'all', search: '' });
+
+  const latitude = location?.latitude ?? null;
+  const longitude = location?.longitude ?? null;
+
+  const loadStations = useCallback(async (
+    options: { showRefreshing?: boolean; clearExisting?: boolean } = {}
+  ) => {
+    if (latitude == null || longitude == null) {
+      return;
+    }
+
+    const { showRefreshing = false, clearExisting = false } = options;
+
+    if (showRefreshing) {
+      setRefreshing(true);
+    }
+
+    setStationsError(null);
+    setExpanded({});
+    setArrivalsByStation({});
+    setArrivalsError({});
+
+    if (clearExisting) {
+      setFetchingStations(true);
+      setAllStations([]);
+      setStations([]);
+    }
+
+    try {
+      const resp = await fetch('/api/stations/nearby', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lat: latitude,
+          lon: longitude,
+          radius: DEFAULT_RADIUS,
+        }),
+      });
+      const json = await resp.json();
+      if (!resp.ok || json.status !== 'success') {
+        throw new Error(json.error || 'Failed to fetch nearby stations');
+      }
+      setAllStations(json.data.stations as NearbyStation[]);
+    } catch (e) {
+      setStationsError((e as Error).message);
+      if (clearExisting) {
+        setAllStations([]);
+        setStations([]);
+      }
+    } finally {
+      if (clearExisting) {
+        setFetchingStations(false);
+      }
+      if (showRefreshing) {
+        setRefreshing(false);
+      }
+    }
+  }, [latitude, longitude]);
 
   useEffect(() => {
-    const loadNearby = async () => {
-      if (!location) return;
-      setFetchingStations(true);
-      setStationsError(null);
-      setStations([]);
+    loadStations({ clearExisting: true });
+  }, [loadStations]);
+
+  useEffect(() => {
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+
+    let filtered = allStations;
+
+    if (selectedMode !== 'all') {
+      filtered = filtered.filter((station) =>
+        station.modes.some((mode) => mode.toLowerCase() === selectedMode)
+      );
+    }
+
+    if (normalizedSearch) {
+      filtered = filtered.filter((station) => {
+        const name = station.name?.toLowerCase() ?? '';
+        const matchesName = name.includes(normalizedSearch);
+        const matchesLine = station.lines.some((line) =>
+          line.name.toLowerCase().includes(normalizedSearch) ||
+          line.id.toLowerCase().includes(normalizedSearch)
+        );
+        return matchesName || matchesLine;
+      });
+    }
+
+    setStations(filtered);
+
+    if (
+      filtersRef.current.mode !== selectedMode ||
+      filtersRef.current.search !== normalizedSearch
+    ) {
       setExpanded({});
       setArrivalsByStation({});
       setArrivalsError({});
-      try {
-        const payload: Record<string, unknown> = {
-          lat: location.latitude,
-          lon: location.longitude,
-          radius: DEFAULT_RADIUS,
-        };
+    }
 
-        if (selectedMode !== 'all') {
-          payload.modes = [selectedMode];
-        }
-
-        const resp = await fetch('/api/stations/nearby', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const json = await resp.json();
-        if (!resp.ok || json.status !== 'success') {
-          throw new Error(json.error || 'Failed to fetch nearby stations');
-        }
-        setStations(json.data.stations as NearbyStation[]);
-      } catch (e) {
-        setStationsError((e as Error).message);
-        setStations([]);
-      } finally {
-        setFetchingStations(false);
-      }
-    };
-    loadNearby();
-  }, [location, selectedMode]);
+    filtersRef.current = { mode: selectedMode, search: normalizedSearch };
+  }, [selectedMode, allStations, searchQuery]);
 
   const topStations = useMemo(() => stations.slice(0, 8), [stations]);
 
@@ -172,6 +236,29 @@ export default function NextAvailablePage() {
             {geoError && (
               <span className="text-sm text-destructive">{geoError.message}</span>
             )}
+          </div>
+
+          <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="relative w-full sm:max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search stations..."
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => loadStations({ showRefreshing: true, clearExisting: allStations.length === 0 })}
+                disabled={refreshing || latitude == null || longitude == null}
+              >
+                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
           </div>
 
           <Tabs value={selectedMode} onValueChange={(value) => setSelectedMode(value as 'all' | ModeKey)} className="mt-8">

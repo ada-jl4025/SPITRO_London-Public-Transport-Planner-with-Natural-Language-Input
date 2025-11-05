@@ -339,14 +339,11 @@ Be specific with line names. For example, "Central Line" -> "Central".`,
         messages: [
           {
             role: 'system',
-            content: `You are a London transport expert. Given a location name, provide the most likely TFL station or stop name.
-If it's already a clear station name, return it as-is.
-If it's a landmark or area, suggest the nearest station.
-Return only the station name, nothing else.
-Examples:
-- "British Museum" -> "Holborn"
-- "Westfield" -> "White City"
-- "Oxford Street" -> "Oxford Circus"`,
+            content: `You are a London transport expert. Given a user-supplied location in London, return the most accurate, human-readable location name.
+Keep the response as close as possible to the user input when it is already clear.
+Expand abbreviations or shorthand to their full London forms when needed (e.g. "IC White City" -> "Imperial College London White City Campus").
+Do not limit responses to transport stations; you may return campuses, landmarks, or neighbourhood names when that best reflects the user's intent.
+Return a single line of text with no extra commentary.`,
           },
           {
             role: 'user',

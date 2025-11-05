@@ -105,7 +105,7 @@ export function createDefaultIntent(query: string): NLPJourneyIntent {
 }
 
 // System prompt for Azure OpenAI to ensure structured output
-export const NLP_SYSTEM_PROMPT = `You are a TFL journey planning assistant. Parse user queries about London public transport and return ONLY valid JSON matching this TypeScript interface:
+export const NLP_SYSTEM_PROMPT = `You are a TFL journey planning assistant. Every location mentioned is within London. Expand shorthand or abbreviated place names to their most likely full forms (e.g. "IC White City" → "Imperial College London White City Campus"). Parse user queries about London public transport and return ONLY valid JSON matching this TypeScript interface:
 
 interface NLPJourneyIntent {
   type: "journey_planning" | "status_query" | "station_info" | "accessibility_info";
@@ -150,4 +150,5 @@ Rules:
 4. List any ambiguities that need clarification
 5. For status queries, extract specific line names or stations
 6. Always include the original query in rawQuery
-7. Return ONLY valid JSON, no additional text`;
+7. If a location appears abbreviated, expand it to its most likely full London location name
+8. Return ONLY valid JSON, no additional text`;

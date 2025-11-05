@@ -79,14 +79,14 @@ export function LineStatus() {
     
     try {
       const params = new URLSearchParams();
-      if (selectedMode !== 'all') {
-        params.append('mode', selectedMode);
-      }
       if (searchQuery) {
         params.append('q', searchQuery);
       }
 
-      const response = await fetch(`/api/status?${params}`);
+      const queryString = params.toString();
+      const url = queryString ? `/api/status?${queryString}` : '/api/status';
+
+      const response = await fetch(url);
       const data = await response.json();
 
       if (data.status === 'success') {
@@ -106,7 +106,7 @@ export function LineStatus() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedMode, searchQuery, toast]);
+  }, [searchQuery, toast]);
 
   // Initial load
   useEffect(() => {

@@ -578,7 +578,7 @@ export function JourneyPlanner() {
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="text-tfl-blue">•</span>
-                  <span>"Royal School of Mines to IC white city"</span>
+                  <span>"Royal School of Mines to Imperial white city"</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="text-tfl-blue">•</span>

@@ -94,8 +94,8 @@ const enhanceLegsWithArrivals = async (journey: Journey): Promise<Array<Leg & { 
   const sortedArrivals = [...arrivals].sort((a, b) => a.timeToStation - b.timeToStation);
 
   const results = journey.legs.map((leg) => {
-    const fromName = leg.departurePoint?.commonName || leg.departurePoint?.name;
-    const toName = leg.arrivalPoint?.commonName || leg.arrivalPoint?.name;
+    const fromName = leg.departurePoint?.commonName;
+    const toName = leg.arrivalPoint?.commonName;
 
     const baseEnhancements: LegEnhancements = {
       fromName,
@@ -142,8 +142,7 @@ const enhanceLegsWithArrivals = async (journey: Journey): Promise<Array<Leg & { 
       }
 
       baseEnhancements.nextArrivals = relevantArrivals;
-      baseEnhancements.platformName =
-        leg.departurePoint?.platformName || relevantArrivals[0]?.platformName || undefined;
+      baseEnhancements.platformName = relevantArrivals[0]?.platformName || undefined;
     }
 
     baseEnhancements.direction = leg.routeOptions?.[0]?.directions?.[0] || leg.instruction?.summary;

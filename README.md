@@ -26,7 +26,7 @@ Create a `.env` file in the root directory with the following variables:
 ```bash
 # Azure OpenAI
 AZURE_API_TARGET_URL=https://your-instance.openai.azure.com/openai/deployments/your-deployment/chat/completions?api-version=2025-01-01-preview
-AZURE_TRANSCRIPTION_TARGET_URL=https://your-instance.openai.azure.com/openai/deployments/your-whisper-deployment/audio/transcriptions?api-version=2025-01-01-preview
+AZURE_TRANSCRIPTION_TARGET_URL=https://your-instance.openai.azure.com/openai/deployments/your-whisper-deployment/audio/transcriptions?api-version=2024-06-01
 AZURE_API_KEY=
 
 # TFL API (optional - for higher rate limits)

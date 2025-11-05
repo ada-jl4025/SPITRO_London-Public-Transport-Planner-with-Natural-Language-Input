@@ -16,7 +16,8 @@ import {
   Train,
   Bus,
   TramFront,
-  Zap
+  Zap,
+  Layers
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getLineColor, getModeColor, getLineShortLabel } from '@/lib/line-colors';
@@ -283,13 +284,27 @@ export function LineStatus() {
       {/* Mode tabs */}
       <Tabs value={selectedMode} onValueChange={setSelectedMode} className="w-full">
         <TabsList className="grid grid-cols-4 lg:grid-cols-8 w-full">
-          <TabsTrigger value="all">All</TabsTrigger>
-          {Object.entries(modeConfig).map(([key, config]) => (
-            <TabsTrigger key={key} value={key} className="flex items-center space-x-1">
-              <config.icon className="h-4 w-4" />
-              <span className="hidden sm:inline">{config.label}</span>
-            </TabsTrigger>
-          ))}
+          <TabsTrigger value="all" className="group flex items-center justify-center gap-2 py-2">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-muted text-foreground/70">
+              <Layers className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <span className="hidden sm:inline">All</span>
+          </TabsTrigger>
+          {Object.entries(modeConfig).map(([key, config]) => {
+            const color = getModeColor(key);
+            return (
+              <TabsTrigger key={key} value={key} className="group flex items-center justify-center gap-2 py-2">
+                <span
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border"
+                  style={{ background: `${color.background}0D`, color: color.background, borderColor: `${color.background}33` }}
+                  title={config.label}
+                >
+                  <config.icon className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <span className="hidden sm:inline">{config.label}</span>
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
 
         <TabsContent value={selectedMode} className="mt-6">

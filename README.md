@@ -2,6 +2,12 @@
 
 Spitro is a modern, accessible journey planning platform for London's public transport network. Plan your journey using natural language, get real-time arrival information, and check service status — all from an open-source project you can adopt and extend.
 
+<div align="center">
+
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-Spitro.com-2563eb?style=for-the-badge&logo=vercel&logoColor=white)](https://spitro.com/)
+
+</div>
+
 ## Features
 
 - 🗣️ Natural language journey planning

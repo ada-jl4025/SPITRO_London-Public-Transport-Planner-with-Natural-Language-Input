@@ -283,8 +283,11 @@ export function LineStatus() {
 
       {/* Mode tabs */}
       <Tabs value={selectedMode} onValueChange={setSelectedMode} className="w-full">
-        <TabsList className="grid grid-cols-4 lg:grid-cols-8 w-full">
-          <TabsTrigger value="all" className="group flex items-center justify-center gap-2 py-2">
+        <TabsList
+          className="w-full h-auto gap-2 grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8"
+          style={{ display: 'grid' }}
+        >
+          <TabsTrigger value="all" className="group flex w-full items-center justify-center gap-2 py-2">
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-muted text-foreground/70">
               <Layers className="h-4 w-4" aria-hidden="true" />
             </span>
@@ -293,7 +296,7 @@ export function LineStatus() {
           {Object.entries(modeConfig).map(([key, config]) => {
             const color = getModeColor(key);
             return (
-              <TabsTrigger key={key} value={key} className="group flex items-center justify-center gap-2 py-2">
+              <TabsTrigger key={key} value={key} className="group flex w-full items-center justify-center gap-2 py-2">
                 <span
                   className="inline-flex h-7 w-7 items-center justify-center rounded-full border"
                   style={{ background: `${color.background}0D`, color: color.background, borderColor: `${color.background}33` }}

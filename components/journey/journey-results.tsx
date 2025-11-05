@@ -357,10 +357,15 @@ export function JourneyResults({
 
                 <div className="space-y-2">
                   {isWalking && enhancements.googleMapsUrl && (
-                    <Button variant="link" size="sm" className="px-0" asChild>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="px-0 h-auto w-full whitespace-normal break-words text-left justify-start gap-1 items-start sm:w-auto"
+                      asChild
+                    >
                       <a href={enhancements.googleMapsUrl} target="_blank" rel="noopener noreferrer">
-                        Open directions in Google Maps
-                        <ArrowUpRight className="ml-1 h-3 w-3" />
+                        <span className="inline">Open directions in Google Maps</span>
+                        <ArrowUpRight className="inline ml-1 h-3 w-3" />
                       </a>
                     </Button>
                   )}

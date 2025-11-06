@@ -90,6 +90,8 @@ export default function NextAvailablePage() {
     mode: normalizeModeSelection(modeParam),
     search: '',
   });
+  const searchAreaRef = useRef<HTMLDivElement | null>(null);
+  const prevModeParamRef = useRef<string | null>(null);
 
   const latitude = location?.latitude ?? null;
   const longitude = location?.longitude ?? null;
@@ -110,6 +112,11 @@ export default function NextAvailablePage() {
     []
   );
 
+  const scrollToSearchArea = useCallback(() => {
+    if (!searchAreaRef.current) return;
+    searchAreaRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
   const updateModeInUrl = useCallback(
     (mode: ModeSelectionValue) => {
       if (!pathname) return;
@@ -123,7 +130,7 @@ export default function NextAvailablePage() {
       }
 
       const queryString = params.toString();
-      router.replace(queryString ? `${pathname}?${queryString}` : pathname);
+      router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
     },
     [pathname, router, searchParams]
   );
@@ -133,7 +140,15 @@ export default function NextAvailablePage() {
     if (normalized !== selectedMode) {
       setSelectedMode(normalized);
     }
-  }, [modeParam, selectedMode]);
+    filtersRef.current.mode = normalized;
+
+    const previousMode = prevModeParamRef.current;
+    const currentMode = modeParam ?? null;
+    if (currentMode && previousMode !== currentMode) {
+      scrollToSearchArea();
+    }
+    prevModeParamRef.current = currentMode;
+  }, [modeParam, selectedMode, scrollToSearchArea]);
 
   const handleModeSelect = useCallback(
     (mode: ModeSelectionValue) => {
@@ -141,8 +156,10 @@ export default function NextAvailablePage() {
       setSelectedMode(mode);
       filtersRef.current.mode = mode;
       updateModeInUrl(mode);
+      prevModeParamRef.current = mode === ALL_MODE_OPTION.value ? null : mode;
+      scrollToSearchArea();
     },
-    [selectedMode, updateModeInUrl]
+    [selectedMode, updateModeInUrl, scrollToSearchArea]
   );
 
   const loadStations = useCallback(async (
@@ -296,7 +313,10 @@ export default function NextAvailablePage() {
             )}
           </div>
 
-          <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div
+            ref={searchAreaRef}
+            className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 scroll-mt-24"
+          >
             <div className="relative w-full sm:max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input

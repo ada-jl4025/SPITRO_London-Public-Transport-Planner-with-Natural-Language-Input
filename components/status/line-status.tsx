@@ -112,43 +112,43 @@ export function LineStatus({ defaultMode }: LineStatusProps) {
       } else if (showRefreshing || modeOverride) {
         setRefreshing(true);
       }
-
-      try {
-        const params = new URLSearchParams();
+    
+    try {
+      const params = new URLSearchParams();
         if (queryForRequest) {
           params.set('q', queryForRequest);
         }
 
         if (modeForRequest && modeForRequest !== ALL_MODE_OPTION.value) {
           params.set('mode', modeForRequest);
-        }
+      }
 
-        const queryString = params.toString();
-        const url = queryString ? `/api/status?${queryString}` : '/api/status';
+      const queryString = params.toString();
+      const url = queryString ? `/api/status?${queryString}` : '/api/status';
 
-        const response = await fetch(url);
-        const data = await response.json();
+      const response = await fetch(url);
+      const data = await response.json();
 
-        if (data.status === 'success') {
-          setStatusData(data.data);
-          setLastUpdated(new Date());
+      if (data.status === 'success') {
+        setStatusData(data.data);
+        setLastUpdated(new Date());
           if (!hasLoadedOnce) {
             setHasLoadedOnce(true);
           }
-        } else {
-          throw new Error(data.error || 'Failed to fetch status');
-        }
-      } catch (error) {
-        console.error('Status fetch error:', error);
-        toast({
+      } else {
+        throw new Error(data.error || 'Failed to fetch status');
+      }
+    } catch (error) {
+      console.error('Status fetch error:', error);
+      toast({
           title: 'Error fetching status',
           description: error instanceof Error ? error.message : 'Please try again',
           variant: 'destructive',
-        });
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
+      });
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
     },
     [hasLoadedOnce, toast]
   );
@@ -351,7 +351,7 @@ export function LineStatus({ defaultMode }: LineStatusProps) {
               type="text"
               placeholder="Search lines..."
               value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 w-[200px]"
             />
           </div>
@@ -374,70 +374,70 @@ export function LineStatus({ defaultMode }: LineStatusProps) {
         disabled={refreshing && hasLoadedOnce}
       />
 
-      {statusData?.modes && (
+          {statusData?.modes && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {statusData.modes
+              {statusData.modes
             .filter((mode: ModeStatus) => selectedMode === ALL_MODE_OPTION.value || mode.mode === selectedMode)
-            .map((mode: ModeStatus) => {
-              const config = modeConfig[mode.mode as keyof typeof modeConfig];
-              if (!config) return null;
-
-              return (
-                <Card key={mode.mode}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <ModeBadge mode={mode.mode} label={config.label} />
-                      </div>
+                .map((mode: ModeStatus) => {
+                  const config = modeConfig[mode.mode as keyof typeof modeConfig];
+                  if (!config) return null;
+                  
+                  return (
+                    <Card key={mode.mode}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <ModeBadge mode={mode.mode} label={config.label} />
+                          </div>
                       <div
                         className={cn(
                           'h-3 w-3 rounded-full',
-                          mode.overallStatus === 'good' ? 'bg-green-600' : 'bg-red-600'
+                            mode.overallStatus === 'good' ? 'bg-green-600' : 'bg-red-600'
                         )}
                       />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {mode.affectedLines.length === 0
-                        ? `All ${mode.totalLines} lines running well`
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">
+                          {mode.affectedLines.length === 0 
+                            ? `All ${mode.totalLines} lines running well`
                         : `${mode.affectedLines.length} of ${mode.totalLines} lines affected`}
-                    </p>
-                  </CardContent>
-                </Card>
-              );
-            })}
-        </div>
-      )}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+            </div>
+          )}
 
-      {statusData?.lines && (
-        <div className="space-y-4">
-          <h3 className="font-semibold text-lg">Line Details</h3>
-          <div className="grid gap-4 md:grid-cols-2">
-            {statusData.lines
-              .filter((line: LineStatusData) => {
+          {statusData?.lines && (
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg">Line Details</h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                {statusData.lines
+                  .filter((line: LineStatusData) => {
                 if (selectedMode !== ALL_MODE_OPTION.value && line.modeName !== selectedMode) {
-                  return false;
-                }
+                      return false;
+                    }
 
-                if (normalizedSearchQuery.length === 0) {
-                  return true;
-                }
+                    if (normalizedSearchQuery.length === 0) {
+                      return true;
+                    }
 
-                if (shouldUseMatchedResults) {
-                  return matchedLineIds.has(line.id);
-                }
+                    if (shouldUseMatchedResults) {
+                      return matchedLineIds.has(line.id);
+                    }
 
-                const normalizedName = line.name.toLowerCase();
-                return (
-                  normalizedName.includes(normalizedSearchQuery) ||
-                  `${normalizedName} line`.includes(normalizedSearchQuery)
-                );
-              })
-              .map(renderLineCard)}
-          </div>
-        </div>
-      )}
+                    const normalizedName = line.name.toLowerCase();
+                    return (
+                      normalizedName.includes(normalizedSearchQuery) ||
+                      `${normalizedName} line`.includes(normalizedSearchQuery)
+                    );
+                  })
+                  .map(renderLineCard)}
+              </div>
+            </div>
+          )}
     </div>
   );
 }

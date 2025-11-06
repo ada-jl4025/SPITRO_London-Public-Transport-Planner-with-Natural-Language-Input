@@ -70,17 +70,22 @@ const enhanceLegsWithArrivals = async (journey: Journey): Promise<Array<Leg & { 
 
   const legDescriptors = nonWalkingLegs.map((leg) => {
     const stopPointId = leg.departurePoint?.naptanId || leg.departurePoint?.id;
+    const parentStationId = leg.departurePoint?.stationNaptan;
     const lineId = leg.routeOptions?.[0]?.lineIdentifier?.id || leg.mode?.id || leg.mode?.name;
 
     if (stopPointId) {
       stopPointIds.add(stopPointId);
     }
+    if (parentStationId) {
+      stopPointIds.add(parentStationId);
+    }
 
     return {
       leg,
       stopPointId,
+      parentStationId,
       lineId: lineId ? lineId.toLowerCase() : undefined,
-    };
+    } as const;
   });
 
   let arrivals: Prediction[] = [];
@@ -96,7 +101,7 @@ const enhanceLegsWithArrivals = async (journey: Journey): Promise<Array<Leg & { 
 
   const sortedArrivals = [...arrivals].sort((a, b) => a.timeToStation - b.timeToStation);
 
-  const results = journey.legs.map((leg) => {
+  const results = await Promise.all(journey.legs.map(async (leg) => {
     const fromName = leg.departurePoint?.commonName;
     const toName = leg.arrivalPoint?.commonName;
 
@@ -117,6 +122,7 @@ const enhanceLegsWithArrivals = async (journey: Journey): Promise<Array<Leg & { 
     const descriptor = legDescriptors.find((item) => item.leg === leg);
 
     if (descriptor?.stopPointId) {
+      const candidateStopIds = [descriptor.stopPointId, descriptor.parentStationId].filter(Boolean) as string[];
       const mapPrediction = (prediction: Prediction) => ({
         id: prediction.id,
         destinationName: prediction.destinationName,
@@ -126,22 +132,38 @@ const enhanceLegsWithArrivals = async (journey: Journey): Promise<Array<Leg & { 
         towards: prediction.towards || prediction.direction,
       });
 
-      let relevantArrivals = descriptor.lineId
-        ? sortedArrivals
-            .filter(
-              (prediction) =>
-                prediction.naptanId === descriptor.stopPointId &&
-                prediction.lineId?.toLowerCase() === descriptor.lineId
-            )
-            .slice(0, 3)
-            .map(mapPrediction)
-        : [];
+      const filterFromCache = (preds: Prediction[]) => preds
+        .filter((prediction) => candidateStopIds.includes(prediction.naptanId))
+        .sort((a, b) => a.timeToStation - b.timeToStation);
 
-      if (relevantArrivals.length === 0) {
-        relevantArrivals = sortedArrivals
-          .filter((prediction) => prediction.naptanId === descriptor.stopPointId)
+      let relevantArrivals = [] as ReturnType<typeof mapPrediction>[];
+
+      // Prefer same line at the same stop/parent station
+      if (descriptor.lineId) {
+        relevantArrivals = filterFromCache(sortedArrivals)
+          .filter((prediction) => prediction.lineId?.toLowerCase() === descriptor.lineId)
           .slice(0, 3)
           .map(mapPrediction);
+      }
+
+      // Fallback: any line from the same stop/parent station
+      if (relevantArrivals.length === 0) {
+        relevantArrivals = filterFromCache(sortedArrivals)
+          .slice(0, 3)
+          .map(mapPrediction);
+      }
+
+      // Final fallback: query line-specific arrivals for this stop
+      if (relevantArrivals.length === 0 && descriptor.lineId) {
+        try {
+          const lineArrivals = await tflClient.getLineArrivals([descriptor.lineId], descriptor.stopPointId);
+          const sortedLineArrivals = lineArrivals
+            .filter((p) => candidateStopIds.includes(p.naptanId))
+            .sort((a, b) => a.timeToStation - b.timeToStation);
+          relevantArrivals = sortedLineArrivals.slice(0, 3).map(mapPrediction);
+        } catch (e) {
+          // Ignore and leave as empty if this also fails
+        }
       }
 
       baseEnhancements.nextArrivals = relevantArrivals;
@@ -154,7 +176,7 @@ const enhanceLegsWithArrivals = async (journey: Journey): Promise<Array<Leg & { 
       ...leg,
       enhancements: baseEnhancements,
     };
-  });
+  }));
 
   return results;
 };

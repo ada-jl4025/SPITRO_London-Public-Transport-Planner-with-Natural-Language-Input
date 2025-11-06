@@ -30,6 +30,10 @@ export function JourneyPlanner() {
   const [hasMounted, setHasMounted] = useState(false);
   const isManualMode = uiState.inputMode === 'manual-selection';
 
+  // Recent search history (localStorage)
+  const [recentNlQueries, setRecentNlQueries] = useState<string[]>([]);
+  const [recentManualPairs, setRecentManualPairs] = useState<Array<{ from: string; to: string }>>([]);
+
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const pendingParamsRef = useRef<JourneySearchParams | null>(null);
@@ -125,6 +129,34 @@ export function JourneyPlanner() {
 
       setJourneyResults(data.data);
       lastSearchParamsRef.current = params;
+      // Persist successful search to history (only on first try)
+      if (!isRetry) {
+        if (uiState.inputMode === 'natural-language' && params.naturalLanguageQuery) {
+          const q = params.naturalLanguageQuery.trim();
+          if (q) {
+            setRecentNlQueries(prev => {
+              const next = [q, ...prev.filter(item => item.toLowerCase() !== q.toLowerCase())].slice(0, 10);
+              try {
+                localStorage.setItem('journeySearchHistory:nl', JSON.stringify(next));
+              } catch {}
+              return next;
+            });
+          }
+        } else if (uiState.inputMode === 'manual-selection') {
+          const from = (params.from || '').trim();
+          const to = (params.to || '').trim();
+          if (to) {
+            setRecentManualPairs(prev => {
+              const key = (p: { from: string; to: string }) => `${(p.from || '').toLowerCase()}->${p.to.toLowerCase()}`;
+              const next = [{ from, to }, ...prev.filter(p => key(p) !== key({ from, to }))].slice(0, 10);
+              try {
+                localStorage.setItem('journeySearchHistory:manual', JSON.stringify(next));
+              } catch {}
+              return next;
+            });
+          }
+        }
+      }
       toast({
         title: 'Journey planned!',
         description: 'Your route has been calculated',
@@ -431,6 +463,18 @@ export function JourneyPlanner() {
     inputRef.current?.focus();
   }, []);
 
+  // Load history on mount
+  useEffect(() => {
+    try {
+      const nl = JSON.parse(localStorage.getItem('journeySearchHistory:nl') || '[]');
+      if (Array.isArray(nl)) setRecentNlQueries(nl.slice(0, 10));
+    } catch {}
+    try {
+      const manual = JSON.parse(localStorage.getItem('journeySearchHistory:manual') || '[]');
+      if (Array.isArray(manual)) setRecentManualPairs(manual.slice(0, 10));
+    } catch {}
+  }, []);
+
   // Cleanup voice recording resources on unmount
   useEffect(() => {
     return () => {
@@ -563,6 +607,37 @@ export function JourneyPlanner() {
                 </Button>
               </div>
             </div>
+
+            {/* Recent natural language searches */}
+            {hasMounted && recentNlQueries.length > 0 && (
+              <div className="flex flex-wrap gap-2" aria-label="Recent searches">
+                {recentNlQueries.slice(0, 6).map((q, idx) => (
+                  <Button
+                    key={`${q}-${idx}`}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => setNaturalLanguageQuery(q)}
+                    aria-label={`Use recent search ${q}`}
+                  >
+                    {q}
+                  </Button>
+                ))}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setRecentNlQueries([]);
+                    try { localStorage.removeItem('journeySearchHistory:nl'); } catch {}
+                  }}
+                  aria-label="Clear search history"
+                >
+                  Clear
+                </Button>
+              </div>
+            )}
             
             {/* Examples - Simplified (hidden on small screens) */}
             <div className="hidden sm:block text-base text-muted-foreground bg-muted/50 rounded-lg p-4">
@@ -675,6 +750,43 @@ export function JourneyPlanner() {
                 />
               </div>
             </div>
+
+            {/* Recent manual searches */}
+            {hasMounted && recentManualPairs.length > 0 && (
+              <div className="space-y-2" aria-label="Recent journeys">
+                <p className="text-sm text-muted-foreground">Recent journeys</p>
+                <div className="flex flex-wrap gap-2">
+                  {recentManualPairs.slice(0, 6).map((p, idx) => (
+                    <Button
+                      key={`${p.from}-${p.to}-${idx}`}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full"
+                      onClick={() => {
+                        setManualFrom(p.from);
+                        setManualTo(p.to);
+                      }}
+                      aria-label={`Use recent journey ${p.from || 'Current location'} to ${p.to}`}
+                    >
+                      {(p.from || 'Current location') + ' → ' + p.to}
+                    </Button>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setRecentManualPairs([]);
+                      try { localStorage.removeItem('journeySearchHistory:manual'); } catch {}
+                    }}
+                    aria-label="Clear journey history"
+                  >
+                    Clear
+                  </Button>
+                </div>
+              </div>
+            )}
             
             <Button 
               type="submit" 

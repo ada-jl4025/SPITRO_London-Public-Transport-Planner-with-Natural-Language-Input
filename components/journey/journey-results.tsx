@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { LucideIcon } from 'lucide-react';
@@ -50,7 +51,20 @@ export function JourneyResults({
   onRefresh,
   refreshing,
 }: JourneyResultsProps) {
-  
+  // Auto-refresh next departures every 15 seconds
+  useEffect(() => {
+    if (!onRefresh) return;
+    const intervalId = setInterval(() => {
+      // Avoid firing when tab is hidden and avoid overlapping refreshes
+      if (typeof document !== 'undefined' && (document as any).hidden) return;
+      if (!refreshing) {
+        onRefresh();
+      }
+    }, 15000);
+
+    return () => clearInterval(intervalId);
+  }, [onRefresh, refreshing]);
+
   // Format duration
   const formatDuration = (minutes: number): string => {
     if (minutes < 60) {

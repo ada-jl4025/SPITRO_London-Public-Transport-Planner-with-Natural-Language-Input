@@ -1,14 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { MapPin, Navigation, Clock, ChevronDown, ChevronUp, ExternalLink, Train, Bus as BusIcon, TramFront, Ship, Footprints, Layers, Zap, Search, RefreshCw } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { MapPin, Navigation, Clock, ChevronDown, ChevronUp, ExternalLink, Train, Bus as BusIcon, TramFront, Ship, Footprints, Zap, Search, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { getLineColor, getModeColor, getLineShortLabel } from '@/lib/line-colors';
 import { TflBadge } from '@/components/branding/tfl-badge';
 import { Input } from '@/components/ui/input';
+import { ModeFilter } from '@/components/status/mode-filter';
+import {
+  ALL_MODE_OPTION,
+  MODE_KEYS,
+  modeConfig,
+  normalizeModeSelection,
+  type ModeSelectionValue,
+} from '@/lib/mode-config';
 
 type NearbyStation = {
   id: string;
@@ -40,18 +48,6 @@ type GroupedArrivals = Array<{
 
 const DEFAULT_RADIUS = 3000;
 
-const modeConfig = {
-  tube: { label: 'Underground', icon: Train },
-  bus: { label: 'Buses', icon: BusIcon },
-  dlr: { label: 'DLR', icon: Train },
-  overground: { label: 'Overground', icon: Train },
-  tram: { label: 'Tram', icon: TramFront },
-  'river-bus': { label: 'River Bus', icon: Ship },
-  'cable-car': { label: 'Cable Car', icon: Zap },
-} as const;
-
-type ModeKey = keyof typeof modeConfig;
-
 function formatEta(seconds: number): string {
   if (seconds < 30) return 'due';
   const mins = Math.round(seconds / 60);
@@ -71,10 +67,17 @@ function googleWalkingUrl(originLat: number, originLon: number, destLat: number,
 export default function NextAvailablePage() {
   const { location, loading: geoLoading, error: geoError, requestLocation, isSupported } = useGeolocation({ autoRequest: true, enableHighAccuracy: true, timeout: 10000 });
 
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const modeParam = searchParams?.get('mode');
+
   const [stations, setStations] = useState<NearbyStation[]>([]);
   const [fetchingStations, setFetchingStations] = useState(false);
   const [stationsError, setStationsError] = useState<string | null>(null);
-  const [selectedMode, setSelectedMode] = useState<'all' | ModeKey>('all');
+  const [selectedMode, setSelectedMode] = useState<ModeSelectionValue>(() =>
+    normalizeModeSelection(modeParam)
+  );
   const [allStations, setAllStations] = useState<NearbyStation[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -83,10 +86,64 @@ export default function NextAvailablePage() {
   const [arrivalsByStation, setArrivalsByStation] = useState<Record<string, GroupedArrivals>>({});
   const [arrivalsLoading, setArrivalsLoading] = useState<Record<string, boolean>>({});
   const [arrivalsError, setArrivalsError] = useState<Record<string, string | null>>({});
-  const filtersRef = useRef<{ mode: 'all' | ModeKey; search: string }>({ mode: 'all', search: '' });
+  const filtersRef = useRef<{ mode: ModeSelectionValue; search: string }>({
+    mode: normalizeModeSelection(modeParam),
+    search: '',
+  });
 
   const latitude = location?.latitude ?? null;
   const longitude = location?.longitude ?? null;
+
+  const modeOptions = useMemo(
+    () => [
+      {
+        value: ALL_MODE_OPTION.value,
+        label: ALL_MODE_OPTION.label,
+        icon: ALL_MODE_OPTION.icon,
+      },
+      ...MODE_KEYS.map((mode) => ({
+        value: mode as ModeSelectionValue,
+        label: modeConfig[mode].label,
+        icon: modeConfig[mode].icon,
+      })),
+    ],
+    []
+  );
+
+  const updateModeInUrl = useCallback(
+    (mode: ModeSelectionValue) => {
+      if (!pathname) return;
+
+      const params = new URLSearchParams(searchParams?.toString() ?? '');
+
+      if (mode === ALL_MODE_OPTION.value) {
+        params.delete('mode');
+      } else {
+        params.set('mode', mode);
+      }
+
+      const queryString = params.toString();
+      router.replace(queryString ? `${pathname}?${queryString}` : pathname);
+    },
+    [pathname, router, searchParams]
+  );
+
+  useEffect(() => {
+    const normalized = normalizeModeSelection(modeParam);
+    if (normalized !== selectedMode) {
+      setSelectedMode(normalized);
+    }
+  }, [modeParam, selectedMode]);
+
+  const handleModeSelect = useCallback(
+    (mode: ModeSelectionValue) => {
+      if (mode === selectedMode) return;
+      setSelectedMode(mode);
+      filtersRef.current.mode = mode;
+      updateModeInUrl(mode);
+    },
+    [selectedMode, updateModeInUrl]
+  );
 
   const loadStations = useCallback(async (
     options: { showRefreshing?: boolean; clearExisting?: boolean } = {}
@@ -152,9 +209,10 @@ export default function NextAvailablePage() {
 
     let filtered = allStations;
 
-    if (selectedMode !== 'all') {
+    if (selectedMode !== ALL_MODE_OPTION.value) {
+      const selectedModeKey = selectedMode;
       filtered = filtered.filter((station) =>
-        station.modes.some((mode) => mode.toLowerCase() === selectedMode)
+        station.modes.some((mode) => mode.toLowerCase() === selectedModeKey)
       );
     }
 
@@ -261,32 +319,14 @@ export default function NextAvailablePage() {
             </div>
           </div>
 
-          <Tabs value={selectedMode} onValueChange={(value) => setSelectedMode(value as 'all' | ModeKey)} className="mt-8">
-            <TabsList className="w-full h-auto gap-2 grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8" style={{ display: 'grid' }}>
-              <TabsTrigger value="all" className="group flex w-full items-center justify-center gap-2 py-2">
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-muted text-foreground/70">
-                  <Layers className="h-4 w-4" aria-hidden="true" />
-                </span>
-                <span className="hidden sm:inline">All</span>
-              </TabsTrigger>
-              {Object.entries(modeConfig).map(([key, config]) => {
-                const color = getModeColor(key);
-                const Icon = config.icon;
-                return (
-                  <TabsTrigger key={key} value={key} className="group flex w-full items-center justify-center gap-2 py-2">
-                    <span
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-full border"
-                      style={{ background: `${color.background}0D`, color: color.background, borderColor: `${color.background}33` }}
-                      title={config.label}
-                    >
-                      <Icon className="h-4 w-4" aria-hidden="true" />
-                    </span>
-                    <span className="hidden sm:inline">{config.label}</span>
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-          </Tabs>
+          <ModeFilter
+            className="mt-8"
+            options={modeOptions}
+            selected={selectedMode}
+            onSelect={handleModeSelect}
+            disabled={refreshing && allStations.length === 0}
+            description="Focus stations and departures for a specific transport network."
+          />
 
           <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {fetchingStations && (

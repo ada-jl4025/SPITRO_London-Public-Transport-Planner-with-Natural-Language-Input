@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Bus, Layers, Train, TramFront, Zap } from 'lucide-react';
+import { Bus, Layers, Ship, Train, TramFront, Zap } from 'lucide-react';
 
 export type ModeKey =
   | 'tube'
@@ -21,12 +21,12 @@ export interface ModeConfigEntry {
 
 export const modeConfig: Record<ModeKey, ModeConfigEntry> = {
   tube: { label: 'Underground', icon: Train, color: '#0019A8' },
-  bus: { label: 'Buses', icon: Bus, color: '#EF1E25' },
+  bus: { label: 'Buses', icon: Bus, color: '#DC241F' },
   dlr: { label: 'DLR', icon: Train, color: '#00A4A7' },
-  overground: { label: 'Overground', icon: Train, color: '#DC582A' },
-  tram: { label: 'Tram', icon: TramFront, color: '#008053' },
-  'river-bus': { label: 'River Bus', icon: Bus, color: '#1D70B8' },
-  'cable-car': { label: 'Cable Car', icon: Zap, color: '#6D2878' },
+  overground: { label: 'Overground', icon: Train, color: '#EE7C0E' },
+  tram: { label: 'Tram', icon: TramFront, color: '#0BD55C' },
+  'river-bus': { label: 'River Bus', icon: Ship, color: '#1C3F94' },
+  'cable-car': { label: 'Cable Car', icon: Zap, color: '#A50034' },
 };
 
 export const MODE_KEYS = Object.keys(modeConfig) as ModeKey[];

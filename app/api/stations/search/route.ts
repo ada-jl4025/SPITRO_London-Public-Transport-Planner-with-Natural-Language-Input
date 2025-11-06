@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { tflClient } from '@/lib/tfl-client';
+import { rankStopPoints, sortLinesNaturally } from '@/lib/search-ranking';
 import type { ApiResponse } from '@/types';
-import type { StopPoint } from '@/types/tfl';
 
 // Force dynamic rendering for this route
 export const dynamic = 'force-dynamic';
@@ -24,24 +24,7 @@ export async function GET(request: NextRequest) {
     const stations = await tflClient.searchStopPoints(query, modes);
 
     // Sort by relevance and limit results
-    const sortedStations = stations
-      .sort((a, b) => {
-        // Prioritize exact matches
-        const aExact = a.commonName.toLowerCase() === query.toLowerCase();
-        const bExact = b.commonName.toLowerCase() === query.toLowerCase();
-        if (aExact && !bExact) return -1;
-        if (!aExact && bExact) return 1;
-
-        // Then prioritize starts with
-        const aStarts = a.commonName.toLowerCase().startsWith(query.toLowerCase());
-        const bStarts = b.commonName.toLowerCase().startsWith(query.toLowerCase());
-        if (aStarts && !bStarts) return -1;
-        if (!aStarts && bStarts) return 1;
-
-        // Then sort alphabetically
-        return a.commonName.localeCompare(b.commonName);
-      })
-      .slice(0, limit);
+    const sortedStations = rankStopPoints(stations, query).slice(0, limit);
 
     // Format the results
     const formattedStations = sortedStations.map(station => ({
@@ -52,7 +35,7 @@ export async function GET(request: NextRequest) {
       lat: station.lat,
       lon: station.lon,
       zone: station.zone,
-      lines: station.lines?.map(line => ({
+      lines: sortLinesNaturally(station.lines).map(line => ({
         id: line.id,
         name: line.name,
       })) || [],

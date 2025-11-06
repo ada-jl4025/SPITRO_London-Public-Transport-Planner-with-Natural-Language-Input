@@ -1,4 +1,5 @@
 import { config } from './config';
+import { rankStopPoints } from './search-ranking';
 import type {
   StopPoint,
   JourneyPlannerResult,
@@ -303,7 +304,8 @@ class TFLApiClient {
     }
 
     const response = await this.fetchApi<{ matches: StopPoint[] }>('/StopPoint/Search', params);
-    return response.matches || [];
+    const matches = response.matches || [];
+    return rankStopPoints(matches, query);
   }
 
   // Get Stop Point by ID

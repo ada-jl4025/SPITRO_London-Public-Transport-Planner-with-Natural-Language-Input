@@ -125,6 +125,27 @@ export async function GET(request: NextRequest) {
     const modes = searchParams.get('mode')?.split(',').filter(Boolean);
     const lines = searchParams.get('lines')?.split(',').filter(Boolean);
     const query = searchParams.get('q'); // Natural language query
+    const limitParam = searchParams.get('limit');
+    const offsetParam = searchParams.get('offset');
+
+    const DEFAULT_LIMIT = 10;
+    const MAX_LIMIT = 50;
+
+    let limit = DEFAULT_LIMIT;
+    if (limitParam) {
+      const parsedLimit = Number.parseInt(limitParam, 10);
+      if (!Number.isNaN(parsedLimit) && parsedLimit > 0) {
+        limit = Math.min(parsedLimit, MAX_LIMIT);
+      }
+    }
+
+    let offset = 0;
+    if (offsetParam) {
+      const parsedOffset = Number.parseInt(offsetParam, 10);
+      if (!Number.isNaN(parsedOffset) && parsedOffset >= 0) {
+        offset = parsedOffset;
+      }
+    }
 
     const supabase = getServiceSupabase();
     const maxSnapshotAgeMs = 2 * 60 * 1000;
@@ -241,7 +262,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Format the response
-    const formattedStatuses = prioritizedStatuses.map(line => {
+    const formattedLineData = prioritizedStatuses.map(line => {
       const arrivals = arrivalsMap.get(line.id) ?? [];
       const upcomingArrivals = [...arrivals]
         .sort((a, b) => a.timeToStation - b.timeToStation)
@@ -278,19 +299,27 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    const totalLineCount = formattedLineData.length;
+    if (offset > totalLineCount) {
+      offset = totalLineCount;
+    }
+
+    const paginatedLines = formattedLineData.slice(offset, offset + limit);
+    type FormattedStatus = (typeof formattedLineData)[number];
+
     // Group by mode for easier display
-    const groupedByMode = formattedStatuses.reduce((acc, line) => {
+    const groupedByMode = formattedLineData.reduce<Record<string, FormattedStatus[]>>((acc, line) => {
       if (!acc[line.modeName]) {
         acc[line.modeName] = [];
       }
       acc[line.modeName].push(line);
       return acc;
-    }, {} as Record<string, typeof formattedStatuses>);
+    }, {});
 
     // Calculate overall status for each mode
     const modeStatuses = Object.entries(groupedByMode).map(([mode, lines]) => {
-      const hasDisruption = lines.some(line => !line.isGoodService);
-      const severities = lines.map(line => line.severity);
+      const hasDisruption = lines.some((line) => !line.isGoodService);
+      const severities = lines.map((line) => line.severity);
       const minSeverity = Math.min(...severities);
       
       return {
@@ -308,9 +337,15 @@ export async function GET(request: NextRequest) {
         lastUpdated: new Date().toISOString(),
         query: query || undefined,
         modes: modeStatuses,
-        lines: formattedStatuses,
+        lines: paginatedLines,
         groupedByMode,
         matchedLineIds: Array.from(matchedIds),
+        totalLineCount,
+        pagination: {
+          offset,
+          limit,
+          returned: paginatedLines.length,
+        },
       },
     });
 

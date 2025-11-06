@@ -86,6 +86,12 @@ export function MainNav() {
   const currentNextLabel = getModeLabel(currentNextMode);
   const isStatusActive = pathname.startsWith('/status');
   const isNextActive = pathname.startsWith('/next-available');
+  const activeStatusOption =
+    statusOptions.find((option) => option.value === currentStatusMode) ?? statusOptions[0];
+  const activeNextOption =
+    nextOptions.find((option) => option.value === currentNextMode) ?? nextOptions[0];
+  const StatusIcon = activeStatusOption.icon;
+  const NextIcon = activeNextOption.icon;
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -345,142 +351,175 @@ export function MainNav() {
 
       {/* Mobile Navigation Menu */}
       {mobileMenuOpen && (
-        <>
-          {/* Backdrop */}
+        <div className="fixed inset-0 z-50 md:hidden">
           <div
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 md:hidden"
+            className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
             onClick={() => setMobileMenuOpen(false)}
             aria-hidden="true"
           />
-          {/* Menu Panel */}
           <nav
-            className="fixed top-[64px] left-0 right-0 bg-white border-b border-gray-200 shadow-lg z-50 md:hidden"
+            className="relative top-[64px] h-[calc(100vh-64px)] overflow-y-auto rounded-t-3xl bg-white shadow-2xl"
             aria-label="Mobile navigation"
           >
-            <div className="container py-2">
-              {navItems.map((item) => {
-                const active = isActive(item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={cn(
-                      "block rounded-lg px-4 py-3 text-base font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
-                      active
-                        ? "text-blue-600 bg-blue-50"
-                        : "text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+            <div className="px-6 pt-6 pb-24 space-y-8">
+              <section>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Navigate
+                </p>
+                <div className="mt-4 space-y-2">
+                  {navItems.map((item) => {
+                    const active = isActive(item.href);
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={cn(
+                          "flex items-center justify-between rounded-2xl border px-4 py-3 text-base font-medium transition",
+                          active
+                            ? "border-blue-200 bg-blue-50 text-blue-700 shadow-sm"
+                            : "border-transparent bg-white text-gray-800 hover:border-blue-100 hover:bg-blue-50/60"
+                        )}
+                      >
+                        <span>{item.label}</span>
+                        {active && (
+                          <span className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                            Current
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Live transport
+                </p>
+                <div className="mt-4 space-y-4">
+                  <div className="rounded-3xl border border-border/60 bg-gradient-to-br from-blue-50/70 via-white to-white p-4 shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => setMobileStatusOpen((prev) => !prev)}
+                      className="flex w-full items-center justify-between rounded-2xl bg-white/80 px-3 py-2 text-left transition hover:bg-white"
+                      aria-expanded={mobileStatusOpen}
+                    >
+                      <span className="flex items-center gap-3">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600/10 text-blue-600">
+                          <StatusIcon className="h-5 w-5" aria-hidden="true" />
+                        </span>
+                        <span className="flex flex-col leading-tight">
+                          <span className="text-sm font-semibold text-gray-900">Service status</span>
+                          {(isStatusActive || mobileStatusOpen) && (
+                            <span className="text-xs text-muted-foreground">{currentStatusLabel}</span>
+                          )}
+                        </span>
+                      </span>
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 text-muted-foreground transition-transform",
+                          mobileStatusOpen && "rotate-180"
+                        )}
+                        aria-hidden="true"
+                      />
+                    </button>
+
+                    {mobileStatusOpen && (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {statusOptions.map((option) => {
+                          const Icon = option.icon;
+                          const optionActive = isStatusActive && currentStatusMode === option.value;
+
+                          return (
+                            <Link
+                              key={option.value}
+                              href={option.href}
+                              onClick={() => {
+                                setMobileMenuOpen(false);
+                                setMobileStatusOpen(false);
+                              }}
+                              className={cn(
+                                "flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition",
+                                optionActive
+                                  ? "border-blue-600 bg-blue-600 text-white shadow-sm"
+                                  : "border-border bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+                              )}
+                            >
+                              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/70">
+                                <Icon className={cn("h-3.5 w-3.5", optionActive ? "text-white" : "text-blue-700")} aria-hidden="true" />
+                              </span>
+                              <span>{option.label}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
                     )}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-
-              <div className="mt-3 px-2">
-                <button
-                  type="button"
-                  onClick={() => setMobileStatusOpen((prev) => !prev)}
-                  className={cn(
-                    "flex w-full items-center justify-between rounded-lg px-4 py-3 text-base font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
-                    isStatusActive
-                      ? "bg-blue-50 text-blue-600"
-                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                  )}
-                  aria-expanded={mobileStatusOpen}
-                >
-                  <span>Service status</span>
-                  <ChevronDown
-                    className={cn("h-4 w-4 transition-transform", mobileStatusOpen && "rotate-180")}
-                    aria-hidden="true"
-                  />
-                </button>
-
-                {mobileStatusOpen && (
-                  <div className="mt-2 space-y-1 pl-4">
-                    {statusOptions.map((option) => {
-                      const Icon = option.icon;
-                      const optionActive = isStatusActive && currentStatusMode === option.value;
-
-                      return (
-                        <Link
-                          key={option.value}
-                          href={option.href}
-                          onClick={() => {
-                            setMobileMenuOpen(false);
-                            setMobileStatusOpen(false);
-                          }}
-                          className={cn(
-                            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition",
-                            optionActive
-                              ? "bg-blue-50 text-blue-700"
-                              : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
-                          )}
-                        >
-                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-gray-50">
-                            <Icon className="h-4 w-4" aria-hidden="true" />
-                          </span>
-                          <span className="flex-1 text-left">{option.label}</span>
-                        </Link>
-                      );
-                    })}
                   </div>
-                )}
-              </div>
 
-              <div className="mt-3 px-2">
-                <button
-                  type="button"
-                  onClick={() => setMobileNextOpen((prev) => !prev)}
-                  className={cn(
-                    "flex w-full items-center justify-between rounded-lg px-4 py-3 text-base font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
-                    isNextActive
-                      ? "bg-blue-50 text-blue-600"
-                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                  )}
-                  aria-expanded={mobileNextOpen}
-                >
-                  <span>Next available</span>
-                  <ChevronDown
-                    className={cn("h-4 w-4 transition-transform", mobileNextOpen && "rotate-180")}
-                    aria-hidden="true"
-                  />
-                </button>
-
-                {mobileNextOpen && (
-                  <div className="mt-2 space-y-1 pl-4">
-                    {nextOptions.map((option) => {
-                      const Icon = option.icon;
-                      const optionActive = isNextActive && currentNextMode === option.value;
-
-                      return (
-                        <Link
-                          key={option.value}
-                          href={option.href}
-                          onClick={() => {
-                            setMobileMenuOpen(false);
-                            setMobileNextOpen(false);
-                          }}
-                          className={cn(
-                            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition",
-                            optionActive
-                              ? "bg-blue-50 text-blue-700"
-                              : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                  <div className="rounded-3xl border border-border/60 bg-gradient-to-br from-orange-50/70 via-white to-white p-4 shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => setMobileNextOpen((prev) => !prev)}
+                      className="flex w-full items-center justify-between rounded-2xl bg-white/80 px-3 py-2 text-left transition hover:bg-white"
+                      aria-expanded={mobileNextOpen}
+                    >
+                      <span className="flex items-center gap-3">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-500/10 text-orange-600">
+                          <NextIcon className="h-5 w-5" aria-hidden="true" />
+                        </span>
+                        <span className="flex flex-col leading-tight">
+                          <span className="text-sm font-semibold text-gray-900">Next available</span>
+                          {(isNextActive || mobileNextOpen) && (
+                            <span className="text-xs text-muted-foreground">{currentNextLabel}</span>
                           )}
-                        >
-                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-gray-50">
-                            <Icon className="h-4 w-4" aria-hidden="true" />
-                          </span>
-                          <span className="flex-1 text-left">{option.label}</span>
-                        </Link>
-                      );
-                    })}
+                        </span>
+                      </span>
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 text-muted-foreground transition-transform",
+                          mobileNextOpen && "rotate-180"
+                        )}
+                        aria-hidden="true"
+                      />
+                    </button>
+
+                    {mobileNextOpen && (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {nextOptions.map((option) => {
+                          const Icon = option.icon;
+                          const optionActive = isNextActive && currentNextMode === option.value;
+
+                          return (
+                            <Link
+                              key={option.value}
+                              href={option.href}
+                              onClick={() => {
+                                setMobileMenuOpen(false);
+                                setMobileNextOpen(false);
+                              }}
+                              className={cn(
+                                "flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition",
+                                optionActive
+                                  ? "border-orange-500 bg-orange-500 text-white shadow-sm"
+                                  : "border-border bg-white text-gray-700 hover:border-orange-300 hover:bg-orange-50"
+                              )}
+                            >
+                              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/70">
+                                <Icon className={cn("h-3.5 w-3.5", optionActive ? "text-white" : "text-orange-600")} aria-hidden="true" />
+                              </span>
+                              <span>{option.label}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </div>
+              </section>
             </div>
           </nav>
-        </>
+        </div>
       )}
     </>
   );

@@ -186,14 +186,14 @@ Allow location access to automatically find the nearest station as your starting
 
 #### Auto-fetch cadence and caching
 
-- A dedicated cron job hits `/api/status/refresh` every 30 seconds using the `TFL_API_KEYS_AUTOFETCH` key rotation list. Each run stores a fresh snapshot in the Supabase table `service_status_snapshots`.
+- A scheduled job keeps `/api/status/refresh` running on a tight cadence using the `TFL_API_KEYS_AUTOFETCH` key rotation list. Each run stores a fresh snapshot in the Supabase table `service_status_snapshots`. Vercel's native Cron Jobs are limited to 1-minute granularity (`* * * * *`). If you need true 30-second intervals, configure an external scheduler (e.g. GitHub Actions, Supabase Edge Function scheduler, or another cron service) to call `/api/status/refresh` every 30 seconds.
 - When `/api/status` is called, the API returns the most recent snapshot as long as it is not older than 2 minutes.
 - If the latest snapshot is older than 2 minutes, the API triggers an on-demand refresh (still using `TFL_API_KEYS_AUTOFETCH`), re-reads Supabase, and only falls back to a direct TfL fetch if no newer data is available. The direct fetch is persisted back into Supabase for subsequent requests.
 - Ensure `TFL_API_KEYS_AUTOFETCH` is configured as a comma-separated list of TfL API keys in the server environment.
 
 - Endpoint: `/api/status/refresh`
   - Method: GET
-  - Purpose: background/cron ingestion to keep Supabase snapshots within 30 seconds of the latest TfL data.
+  - Purpose: background/cron ingestion to keep Supabase snapshots within 30 seconds of the latest TfL data when invoked on that cadence.
 
 ### Station Search
 - Endpoint: `/api/stations/search`

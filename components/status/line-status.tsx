@@ -224,7 +224,7 @@ export function LineStatus({ defaultMode }: LineStatusProps) {
 
   // Initial load
   useEffect(() => {
-    fetchStatus();
+    fetchStatus({ reset: true });
   }, [fetchStatus]);
 
   // Keep refs in sync

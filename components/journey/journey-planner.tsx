@@ -12,6 +12,8 @@ import { JourneyResults } from './journey-results';
 import { MapPin, Mic, MicOff, Send, Loader2, ArrowRight } from 'lucide-react';
 import type { UIState, JourneySearchParams, TransportMode } from '@/types';
 
+const MAX_RECENT_HISTORY_ITEMS = 15;
+
 export function JourneyPlanner() {
   const [uiState, setUiState] = useState<UIState>({
     inputMode: 'natural-language',
@@ -166,7 +168,8 @@ export function JourneyPlanner() {
           const q = params.naturalLanguageQuery.trim();
           if (q) {
             setRecentNlQueries(prev => {
-              const next = [q, ...prev.filter(item => item.toLowerCase() !== q.toLowerCase())].slice(0, 10);
+              const next = [q, ...prev.filter(item => item.toLowerCase() !== q.toLowerCase())]
+                .slice(0, MAX_RECENT_HISTORY_ITEMS);
               try {
                 localStorage.setItem('journeySearchHistory:nl', JSON.stringify(next));
               } catch {}
@@ -179,7 +182,8 @@ export function JourneyPlanner() {
           if (to) {
             setRecentManualPairs(prev => {
               const key = (p: { from: string; to: string }) => `${(p.from || '').toLowerCase()}->${p.to.toLowerCase()}`;
-              const next = [{ from, to }, ...prev.filter(p => key(p) !== key({ from, to }))].slice(0, 10);
+              const next = [{ from, to }, ...prev.filter(p => key(p) !== key({ from, to }))]
+                .slice(0, MAX_RECENT_HISTORY_ITEMS);
               try {
                 localStorage.setItem('journeySearchHistory:manual', JSON.stringify(next));
               } catch {}
@@ -606,11 +610,11 @@ export function JourneyPlanner() {
   useEffect(() => {
     try {
       const nl = JSON.parse(localStorage.getItem('journeySearchHistory:nl') || '[]');
-      if (Array.isArray(nl)) setRecentNlQueries(nl.slice(0, 10));
+      if (Array.isArray(nl)) setRecentNlQueries(nl.slice(0, MAX_RECENT_HISTORY_ITEMS));
     } catch {}
     try {
       const manual = JSON.parse(localStorage.getItem('journeySearchHistory:manual') || '[]');
-      if (Array.isArray(manual)) setRecentManualPairs(manual.slice(0, 10));
+      if (Array.isArray(manual)) setRecentManualPairs(manual.slice(0, MAX_RECENT_HISTORY_ITEMS));
     } catch {}
   }, []);
 
@@ -776,7 +780,7 @@ export function JourneyPlanner() {
             {hasMounted && recentNlQueries.length > 0 && (
               <div className="text-center">
                 <div className="inline-flex gap-2 flex-wrap justify-center">
-                  {recentNlQueries.slice(0, 3).map((q, idx) => (
+                  {recentNlQueries.slice(0, MAX_RECENT_HISTORY_ITEMS).map((q, idx) => (
                     <button
                       key={`${q}-${idx}`}
                       type="button"
@@ -852,7 +856,7 @@ export function JourneyPlanner() {
             {hasMounted && recentManualPairs.length > 0 && (
               <div className="text-center">
                 <div className="inline-flex gap-2 flex-wrap justify-center">
-                  {recentManualPairs.slice(0, 3).map((p, idx) => (
+                  {recentManualPairs.slice(0, MAX_RECENT_HISTORY_ITEMS).map((p, idx) => (
                     <button
                       key={`${p.from}-${p.to}-${idx}`}
                       type="button"
